@@ -3,7 +3,8 @@ import time
 import os
 
 command = "start cmd /k python "
-to_run = ["server.py", "client.py", "client.py"]
+# to_run = ["server.py", "client.py", "client.py"]
+to_run = ["/networking/server.py", "/networking/client.py"]
 server : subprocess.Popen = None 
 
 for app in to_run:
@@ -17,5 +18,5 @@ for app in to_run:
         server = process
     # process.wait()
 
-while(True):
+while(process):
     time.sleep(1)
