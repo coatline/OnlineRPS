@@ -45,12 +45,12 @@ class TCP_Server(Thread):
             try:
                 data = json.loads(data)
                 action = data['action']
-                identifier = None
+                user_id = None
                 room_id = None
                 payload = None
 
                 try:
-                    identifier = data['identifier']
+                    user_id = data['identifier']
                 except KeyError:
                     pass
                 
@@ -67,7 +67,7 @@ class TCP_Server(Thread):
                 self.lock.acquire()
 
                 try:
-                    self.route(conn, addr, action, payload, identifier, room_id)
+                    self.route(conn, addr, action, payload, user_id, room_id)
                 finally:
                     self.lock.release()
 
@@ -82,7 +82,7 @@ class TCP_Server(Thread):
             
         self.stop()
         
-    def route(self, sock, addr, action, payload, identifier = None, room_id = None):
+    def route(self, sock, addr, action, payload, user_id = None, room_id = None):
         if action == "register":
             print(f"Registered user with port: {int(payload)}")
             user = self.rooms.register_new_user(addr, int(payload))
@@ -90,18 +90,40 @@ class TCP_Server(Thread):
             user.send_tcp(True, user.identifier, sock)
             return
         else:
-            if identifier not in self.rooms.users.keys():
-                print(f"Unknown user identifier: {identifier}")
+            if user_id not in self.rooms.users.keys():
+                print(f"Unknown user identifier: {user_id}")
                 sock.send(json.dumps({"success" : "False", "message": "Unknown identifier"}))
                 return
             
-            user : User = self.rooms.users[identifier]
+            user : User = self.rooms.users[user_id]
 
-            if action == "create_rom":
+            if action == "create_room":
                 room_identifier = self.rooms.create_room(payload)
                 self.rooms.join_user(user.identifier, room_identifier)
                 # send the client their current room_id
                 user.send_tcp(True, room_identifier, sock)
+            elif action == "get_rooms":
+                # get the room, room_id, room_name, player_count, capacity
+                rooms = []
+                for room_id, room, in self.rooms.rooms.items():
+                    rooms.append({"room_id": room_id, "room_name": room.name,
+                                    "player_count": len(room.users), "room_capacity": room.capacity})
+                user.send_tcp(True, rooms, sock)
+            elif action == "leave_room":
+                try:
+                    if room_id not in self.rooms.rooms:
+                        raise RoomNotFound()
+                    self.rooms.leave(user_id, room_id)
+                    user.send_tcp(True, room_id, sock)
+                except RoomNotFound:
+                    user.send_tcp(False, room_id, sock)
+                except NotInRoom:
+                    user.send_tcp(False, room_id, sock)
+                
 
     def stop(self):
         self.sock.close()
+        
+        
+class RoomNotFound(BaseException): pass
+class NotInRoom(BaseException): pass

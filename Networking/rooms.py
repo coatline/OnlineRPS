@@ -47,6 +47,10 @@ class Rooms:
     
     def join_user(self, user_id, room_id):
         self.rooms[room_id].join_user(self.users[user_id])
+        
+    def leave_user(self, user_id, room_id):
+        user = self.users[user_id]
+        self.rooms[room_id].leave_user(user)
 
-class NotInRoom(): pass
-class RoomNotFound(): pass
+class NotInRoom(BaseException): pass
+class RoomNotFound(BaseException): pass

@@ -46,24 +46,48 @@ class Client:
         # register client to server and get unique identifier
         print(f"Creating room.")
 
-        # send server my port
         message = json.dumps({
             "action": "create_room",
             "identifier": self.identifier,
             "payload": "new room!"
         })
         
+        data = self.send_tcp(message)
+        
+        self.room_id = self.parse_data(data)
+        
+        print(f"Room successfully created and joined. (room_id: {self.room_id})")
+
+    def get_rooms(self):
+        message = json.dumps({
+            "action": "leave_room",
+            "room_id": self.room_id,
+            "identifier": self.identifier
+        })
+        
+        data = self.send_tcp(message)
+        
+        print(f"Found rooms: ({data})")
+        return data
+
+    def leave_room(self):
+        message = json.dumps({
+            "action": "get_rooms",
+            "identifier": self.identifier
+        })
+        
+        self.send_tcp(message)
+        print("Left room!")
+        
+
+    def send_tcp(self, json):
         self.sock_tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock_tcp.connect(self.server_tcp_addr)
-        self.sock_tcp.send(message.encode())
+        self.sock_tcp.send(json.encode())
 
         data = self.sock_tcp.recv(1024)
         self.sock_tcp.close()
-        
-        message = self.parse_data(data)
-        self.room_id = message
-
-        print(f"Room successfully created and joined. ({data})")
+        return self.parse_data(data)
 
     def parse_data(self, data):
         try:
@@ -76,6 +100,9 @@ class Client:
             print(f"Value Error: {data}")
 
     def stop(self):
+        if self.room_id != None:
+            self.leave_room()
+        
         self.server_listener.stop()
         self.server_listener.join()
 
@@ -93,3 +120,7 @@ if __name__ == "__main__":
             quit()
         elif cmd == "create":
             client.create_room()
+        elif cmd == "rooms":
+            client.get_rooms()
+        elif cmd == "leave":
+            client.leave_room()

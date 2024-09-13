@@ -17,13 +17,14 @@ class Room:
         else:
             raise RoomFull()
 
+    def leave_user(self, user):
+        self.users.remove(user)
 
     def is_empty(self) -> bool:
         return len(self.users) == 0
 
     def is_full(self) -> bool:
         return len(self.users) == self.capacity
-    
 
 
-class RoomFull(): pass
+class RoomFull(BaseException): pass
