@@ -1,5 +1,6 @@
 from threading import Lock
-from server_types import UDP_Server, TCP_Server
+from udp_server import UDP_Server
+from tcp_server import TCP_Server
 from rooms import Rooms
 
 def main_loop(tcp_port, udp_port):
@@ -26,13 +27,12 @@ def main_loop(tcp_port, udp_port):
             is_running = False
         elif command == "rooms":
             for room in rooms.rooms.values():
-                print(f"{room.name} ({room.identifier})")
+                print(f"{room.name} : players:{len(room.users)}/{room.capacity} ({room.identifier})")
 
-    
     # wait until the threads are finished.
     udp_server.join()
     tcp_server.join()
 
 if __name__ == "__main__":
-    main_loop(7777, 7777)
+    main_loop(7777, 7778)
     quit()

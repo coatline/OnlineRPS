@@ -22,10 +22,8 @@ class Game:
         if self.game_full():
             self.start_game()
 
-
     def game_full(self) -> bool:
         return len(self.players) == 2
-
 
     def start_game(self):
 

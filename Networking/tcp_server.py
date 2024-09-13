@@ -3,17 +3,8 @@ from rooms import Rooms
 from user import User
 import socket
 import json
+import time
 
-class UDP_Server(Thread):
-    def __init__(self, port, lock : Lock, rooms : Rooms) -> None:
-        Thread.__init__(self)
-        
-        self.port = port
-        self.lock = lock
-        self.rooms = rooms
-        self.is_listening = True
-
-    
 class TCP_Server(Thread):
     def __init__(self, port, lock : Lock, rooms : Rooms) -> None:
         Thread.__init__(self)
@@ -30,15 +21,23 @@ class TCP_Server(Thread):
         self.sock.setblocking(0)
         self.sock.settimeout(5)
         self.sock.listen(1)
+        
+        last_cleanup_time = time.time()
 
         while self.is_listening:
-            # wait until we can establish a connection
+            
+             #  Clean empty rooms
+            if last_cleanup_time + 60 < time.time():
+                self.rooms.remove_empty_rooms()
+                last_cleanup_time = time.time()
+            
+            # listen for incoming connections
             try:
                 conn, addr = self.sock.accept()
             except socket.timeout:
                 continue
 
-            print(f"Accepted connection to {addr}.")
+            # print(f"Accepted connection to {addr}.")
 
             data = conn.recv(1024)
 
@@ -99,9 +98,16 @@ class TCP_Server(Thread):
 
             if action == "create_room":
                 room_identifier = self.rooms.create_room(payload)
-                self.rooms.join_user(user.identifier, room_identifier)
+                self.rooms.try_join_user_to(user_id, self.rooms.rooms[room_identifier].name)
                 # send the client their current room_id
                 user.send_tcp(True, room_identifier, sock)
+            elif action == "auto_join":
+                room_id = self.rooms.auto_join_user(user_id)
+                user.send_tcp(True, room_id, sock)
+            elif action == "join_room":
+                print(f"attempting to join player to room {payload}")
+                new_room_id = self.rooms.try_join_user_to(user_id, payload)
+                user.send_tcp(new_room_id != None, new_room_id, sock)
             elif action == "get_rooms":
                 # get the room, room_id, room_name, player_count, capacity
                 rooms = []
@@ -113,12 +119,16 @@ class TCP_Server(Thread):
                 try:
                     if room_id not in self.rooms.rooms:
                         raise RoomNotFound()
-                    self.rooms.leave(user_id, room_id)
+                    self.rooms.leave_user(user_id, room_id)
                     user.send_tcp(True, room_id, sock)
                 except RoomNotFound:
+                    print("Room not found")
                     user.send_tcp(False, room_id, sock)
                 except NotInRoom:
+                    print("Not in room")
                     user.send_tcp(False, room_id, sock)
+            else:
+                print(f"**Action {action} not recongnized!**")
                 
 
     def stop(self):
