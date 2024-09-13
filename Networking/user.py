@@ -9,12 +9,7 @@ class User:
         self.udp_addr = (addr[0], int(udp_port))
 
     def send_tcp(self, success, data, sock : socket.socket):
-        success_string = "False"
-
-        if success:
-            success_string = "True"
-
-        message = json.dumps({"success": success_string, "message": data})
+        message = json.dumps({"success": str(success), "message": data})
         sock.send(message.encode())
 
     def send_udp(self, player_identifier, message):

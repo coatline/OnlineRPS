@@ -24,6 +24,10 @@ def main_loop(tcp_port, udp_port):
             udp_server.is_listening = False
             tcp_server.is_listening = False
             is_running = False
+        elif command == "rooms":
+            for room in rooms.rooms.values():
+                print(f"{room.name} ({room.identifier})")
+
     
     # wait until the threads are finished.
     udp_server.join()

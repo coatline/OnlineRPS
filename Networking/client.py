@@ -15,9 +15,9 @@ class Client:
         self.server_udp_addr = (server_host_ip, server_port_udp)
         self.server_tcp_addr = (server_host_ip, server_port_tcp)
         
-        self.register()
+        self.register_to_server()
 
-    def register(self):
+    def register_to_server(self):
         # register client to server and get unique identifier
         print(f"Registering to server at {self.server_tcp_addr}.")
 
@@ -30,13 +30,41 @@ class Client:
         self.sock_tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock_tcp.connect(self.server_tcp_addr)
         self.sock_tcp.send(message.encode())
+
+        # recieve connected message that comes with my unique identifier
+        
         data = self.sock_tcp.recv(1024)
-        print(f"data recieved: {data}")
+        
+
         self.sock_tcp.close()
         message = self.parse_data(data)
+        print(f"identifier recieved: {message}")
         self.identifier = message
         print(f"I connected! {self.server_tcp_addr}")
     
+    def create_room(self):
+        # register client to server and get unique identifier
+        print(f"Creating room.")
+
+        # send server my port
+        message = json.dumps({
+            "action": "create_room",
+            "identifier": self.identifier,
+            "payload": "new room!"
+        })
+        
+        self.sock_tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock_tcp.connect(self.server_tcp_addr)
+        self.sock_tcp.send(message.encode())
+
+        data = self.sock_tcp.recv(1024)
+        self.sock_tcp.close()
+        
+        message = self.parse_data(data)
+        self.room_id = message
+
+        print(f"Room successfully created and joined. ({data})")
+
     def parse_data(self, data):
         try:
             data = json.loads(data)
@@ -47,12 +75,21 @@ class Client:
         except ValueError:
             print(f"Value Error: {data}")
 
+    def stop(self):
+        self.server_listener.stop()
+        self.server_listener.join()
 
 if __name__ == "__main__":
 
     is_running = True
-    client = Client("192.168.1.116")
+    port = input("enter port > ")
+    
+    client = Client("192.168.1.116", 7777, 7777, int(port))
 
-    input()
-    # while is_running:
-    # pass
+    while is_running:
+        cmd = input()
+        if cmd == "quit":
+            client.stop()
+            quit()
+        elif cmd == "create":
+            client.create_room()

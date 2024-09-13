@@ -20,7 +20,7 @@ class Rooms:
          
         user = None
 
-        for registered_user in self.users:
+        for registered_user in self.users.values():
             if registered_user.addr == user_addr:
                 user = registered_user
                 user.udp_addr = (user_addr[0], user_udp_port)
@@ -31,3 +31,22 @@ class Rooms:
             self.users[user.identifier] = user
         
         return user
+    
+    def send_to_all(self, user_id, room_id, message):
+        if room_id not in self.rooms:
+            raise RoomNotFound()
+         
+        room = self.rooms[room_id]
+         
+        if not room.is_user_in_room(user_id):
+            raise NotInRoom()
+         
+        for user in room.users:
+            if user.identifier != user_id:
+                user.send_udp(message)
+    
+    def join_user(self, user_id, room_id):
+        self.rooms[room_id].join_user(self.users[user_id])
+
+class NotInRoom(): pass
+class RoomNotFound(): pass

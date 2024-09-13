@@ -1,8 +1,8 @@
 from threading import Thread, Lock
 from rooms import Rooms
+from user import User
 import socket
 import json
-import time
 
 class UDP_Server(Thread):
     def __init__(self, port, lock : Lock, rooms : Rooms) -> None:
@@ -84,11 +84,24 @@ class TCP_Server(Thread):
         
     def route(self, sock, addr, action, payload, identifier = None, room_id = None):
         if action == "register":
-            print("registered")
+            print(f"Registered user with port: {int(payload)}")
             user = self.rooms.register_new_user(addr, int(payload))
             # send success and user's identifier
             user.send_tcp(True, user.identifier, sock)
             return
+        else:
+            if identifier not in self.rooms.users.keys():
+                print(f"Unknown user identifier: {identifier}")
+                sock.send(json.dumps({"success" : "False", "message": "Unknown identifier"}))
+                return
+            
+            user : User = self.rooms.users[identifier]
+
+            if action == "create_rom":
+                room_identifier = self.rooms.create_room(payload)
+                self.rooms.join_user(user.identifier, room_identifier)
+                # send the client their current room_id
+                user.send_tcp(True, room_identifier, sock)
 
     def stop(self):
         self.sock.close()
